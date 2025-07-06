@@ -3,16 +3,113 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.x509.oid import NameOID
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
+from tkinter import messagebox
 
 try:
     # 尝试导入Tkinter库（Python 3）
     import tkinter as tk
-    from tkinter import ttk, messagebox, filedialog
+    from tkinter import ttk, filedialog
     tk_available = True
 except ImportError:
     # 导入失败时设置标志
     tk_available = False
+    # 创建虚拟模块避免未定义错误
+    class DummyMisc:
+        def __init__(self, master=None):
+            self.master = master if master is None or isinstance(master, DummyMisc) else None
+         
+        def winfo_children(self):
+            return []
+         
+        def _w(self):
+            return None
+         
+        def config(self, **kwargs):
+            pass
+         
+        def pack(self, **kwargs):
+            pass
+
+    class DummyTk(DummyMisc, object):
+        BOTH = 'both'
+        W = 'w'
+        E = 'e'
+        def __init__(self):
+            super().__init__()
+
+        def geometry(self, *args):
+            pass
+
+        def title(self, text):
+            pass
+        def resizable(self, width_enabled, height_enabled):
+            pass
+        def Tk(self):
+            return self
+        def mainloop(self):
+            pass
+
+    # 在模块顶部定义tk引用
+    tk = DummyTk() if not tk_available else __import__('tkinter')
+    
+    class DummyTtk:
+        class Frame(DummyMisc):  # 修改为继承自DummyMisc
+            def __init__(self, master=None, **kwargs):
+                super().__init__(master)
+            def grid(self, **kwargs):
+                pass
+
+        def Style(self):
+            return self
+        
+        def configure(self, style_name, **options):
+            pass
+        
+        # 添加其他必要组件模拟
+        class Label(DummyMisc):
+            def __init__(self, master=None, **kwargs):
+                super().__init__(master)
+            
+            def grid(self, **kwargs):
+                pass
+
+        class Button(DummyMisc):
+            def __init__(self, master=None, **kwargs):
+                super().__init__(master)
+    
+        class Entry(DummyMisc):
+            def __init__(self, master=None, **kwargs):
+                super().__init__()
+                self._value = kwargs.get('text', '')
+            
+            def get(self):
+                return self._value
+    
+        class Spinbox(DummyMisc):
+            def __init__(self, master=None, **kwargs):
+                super().__init__()
+                self._value = kwargs.get('from_', 0)
+            
+            def get(self):
+                return str(self._value)
+            
+            def set(self, value):
+                self._value = int(value)
+
+    tk = DummyTk()
+    ttk = DummyTtk()
+    # 创建虚拟messagebox避免未定义错误
+    class DummyMessageBox:
+        @staticmethod
+        def showerror(message, title="错误"):
+            print(f"ERROR: {title} - {message}")
+        
+        @staticmethod
+        def showinfo(message, title="信息"):
+            print(f"INFO: {title} - {message}")
+    
+    messagebox = DummyMessageBox()
 
 class CertificateGenerator:
     def __init__(self):
@@ -44,9 +141,9 @@ class CertificateGenerator:
         ).serial_number(
             x509.random_serial_number()
         ).not_valid_before(
-            datetime.now(datetime.UTC)
+            datetime.now(timezone.utc)
         ).not_valid_after(
-            datetime.now(datetime.UTC) + timedelta(days=validity_days)
+            datetime.now(timezone.utc) + timedelta(days=validity_days)
         ).add_extension(
             x509.BasicConstraints(ca=True, path_length=None),
             critical=True
@@ -67,8 +164,8 @@ class CertificateGenerator:
 
 def run_gui():
     if not tk_available:
-        messagebox.showerror("错误", "无法导入Tkinter库，请确保您的Python环境支持GUI。")
-        return
+        print("错误：无法导入Tkinter库，将使用命令行模式")
+        return False
 
     def generate_certificate():
         common_name = entry_common_name.get()
@@ -76,19 +173,24 @@ def run_gui():
         output_prefix = entry_output.get() or common_name
 
         if not common_name:
-            messagebox.showerror("错误", "请输入证书通用名称")
+            if messagebox:
+                messagebox.showerror("错误", "请输入证书通用名称")
             return
 
         try:
             generator = CertificateGenerator()
-            certificate = generator.generate_cert(common_name, validity_days)
+            certificate = generator.generate_cert(common_name=common_name, validity_days=validity_days)
             generator.save_to_files(certificate, output_prefix)
-            messagebox.showinfo("成功", f"证书已生成: {output_prefix}.key/pem")
+            if messagebox is not None:
+                messagebox.showinfo("成功", f"证书已生成: {output_prefix}.key/pem")
+            else:
+                print(f"证书已生成: {output_prefix}.key/pem")
         except Exception as e:
-            messagebox.showerror("错误", f"生成证书时出错: {str(e)}")
+            if messagebox:
+                messagebox.showerror("错误", f"生成证书时出错: {str(e)}")
 
     root = tk.Tk()
-    root.title("SSL证书生成工具")
+    root.title("SSL证书生成器")
     root.geometry("400x300")
     root.resizable(False, False)
 
@@ -98,30 +200,31 @@ def run_gui():
     style.configure("TButton", font=("SimHei", 10))
     style.configure("TEntry", font=("SimHei", 10))
 
-    frame = ttk.Frame(root, padding="20")
+    frame = ttk.Frame(root, padding="20")  # type: ignore
     frame.pack(fill=tk.BOTH, expand=True)
 
     # 证书通用名称
-    ttk.Label(frame, text="证书通用名称:").grid(row=0, column=0, sticky=tk.W, pady=5)
-    entry_common_name = ttk.Entry(frame, width=30)
-    entry_common_name.grid(row=0, column=1, sticky=tk.W, pady=5)
+    ttk.Label(frame, text="证书通用名称:").grid(row=0, column=1, sticky=tk.W, pady=5)  # type: ignore
+    entry_common_name = ttk.Entry(frame, width=30)  # type: ignore
+    entry_common_name.grid(row=0, column=1, sticky=tk.W, pady=5)  # type: ignore
 
     # 有效期天数
-    ttk.Label(frame, text="有效期天数:").grid(row=1, column=0, sticky=tk.W, pady=5)
-    spinbox_days = ttk.Spinbox(frame, from_=1, to=3650, width=27, value=365)
-    spinbox_days.grid(row=1, column=1, sticky=tk.W, pady=5)
+    ttk.Label(frame, text="有效期天数:").grid(row=1, column=0, sticky=tk.W, pady=5)  # type: ignore
+    spinbox_days = ttk.Spinbox(frame, from_=1, to=3650, width=27)  # type: ignore
+    spinbox_days.set(365)
+    spinbox_days.grid(row=1, column=1, sticky=tk.W, pady=5)  # type: ignore
 
     # 输出文件名前缀
-    ttk.Label(frame, text="输出文件名前缀:").grid(row=2, column=0, sticky=tk.W, pady=5)
-    entry_output = ttk.Entry(frame, width=30)
-    entry_output.grid(row=2, column=1, sticky=tk.W, pady=5)
+    ttk.Label(frame, text="输出文件名前缀:").grid(row=2, column=0, sticky=tk.W, pady=5)  # type: ignore
+    entry_output = ttk.Entry(frame, width=30)  # type: ignore
+    entry_output.grid(row=2, column=1, sticky=tk.W, pady=5)  # type: ignore
 
     # 生成按钮
-    button_generate = ttk.Button(frame, text="生成证书", command=generate_certificate)
-    button_generate.grid(row=3, column=0, columnspan=2, pady=20)
+    button_generate = ttk.Button(frame, text="生成证书", command=generate_certificate)  # type: ignore
+    button_generate.grid(row=3, column=0, columnspan=2, pady=20)  # type: ignore
 
     # 底部信息
-    ttk.Label(frame, text="SSL证书生成工具 v1.0").grid(row=4, column=0, columnspan=2, pady=10)
+    ttk.Label(frame, text="SSL证书生成工具 v1.0").grid(row=4, column=0, columnspan=2, pady=10)  # type: ignore
 
     root.mainloop()
 
@@ -143,6 +246,6 @@ if __name__ == "__main__":
             parser.error('-n/--name 参数是必需的，除非使用 --gui 选项')
         
         generator = CertificateGenerator()
-        certificate = generator.generate_cert(args.name, args.days)
+        certificate = generator.generate_cert(common_name=args.name, validity_days=args.days)
         generator.save_to_files(certificate, args.output or args.name)
         print(f"证书已生成: {args.output or args.name}.key/pem")
