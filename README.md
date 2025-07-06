@@ -15,7 +15,7 @@
 ### 启动API服务
 ```bash
 # 开发模式（支持热重载）
-uvicorn main:app --reload --host 0.0.0.0 --port 8000
+uvicorn main:app --reload --host 127.0.0.1 --port 8000
 
 # 生产模式
 python main.py
