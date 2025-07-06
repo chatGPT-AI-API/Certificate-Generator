@@ -1,0 +1,8 @@
+# Python忽略规则
+__pycache__/
+*.py[cod]
+*$py.class
+
+# 本地开发环境
+.env
+venv/
