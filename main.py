@@ -13,8 +13,63 @@ app = FastAPI(
     version="1.0.0",
     description="证书生成服务API文档",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
+    openapi_tags=[
+        {
+            "name": "证书",
+            "description": "证书生成和管理相关接口",
+        },
+    ],
+    openapi_url="/openapi.json",
+    swagger_ui_parameters={
+        "docExpansion": "none",
+        "defaultModelsExpandDepth": -1,
+        "displayRequestDuration": True,
+        "filter": True,
+        "operationsSorter": "method",
+        "tagsSorter": "alpha",
+        "validatorUrl": None,
+        "syntaxHighlight": {
+            "activate": True,
+            "theme": "tomorrow-night"
+        }
+    }
 )
+
+from fastapi.openapi.docs import get_swagger_ui_html
+@app.get("/docs", include_in_schema=False)
+async def custom_swagger_ui_html():
+    return get_swagger_ui_html(
+        openapi_url=app.openapi_url,
+        title=app.title + " - Swagger UI",
+        swagger_js_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js",
+        swagger_css_url="https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css",
+        swagger_ui_parameters={
+            **app.swagger_ui_parameters,
+            "lang": "zh-CN",
+            "translator": """
+                function (translations) {
+                    translations['zh-CN'] = {
+                        'operations': '操作',
+                        'no operations': '无可用操作',
+                        'try it out': '尝试一下',
+                        'show/hide': '显示/隐藏',
+                        'list operations': '列出操作',
+                        'expand operations': '展开操作',
+                        'authorize': '授权',
+                        'response': '响应',
+                        'request': '请求',
+                        'model': '模型',
+                        'schemes': '协议',
+                        'im': '接口模型'
+                    };
+                    return translations;
+                }
+            """
+        },
+        oauth2_redirect_url=app.swagger_ui_oauth2_redirect_url,
+        init_oauth=app.swagger_ui_init_oauth,
+    )
 
 @app.get("/", response_class=HTMLResponse)
 async def root(request: Request):
