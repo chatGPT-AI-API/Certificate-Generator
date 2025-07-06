@@ -6,6 +6,9 @@ from cert_generator import CertificateGenerator
 from datetime import datetime
 import os
 
+# 跟踪已生成的证书文件
+generated_certs = set()
+
 templates = Jinja2Templates(directory="templates")
 
 app = FastAPI(
@@ -99,7 +102,7 @@ class CertificateRequest(BaseModel):
     validity_days: int = 365
     output_prefix: str = None
 
-@app.post("/certificates")
+@app.post("/certificates", tags=["证书"])
 async def create_certificate(request: CertificateRequest):
     try:
         generator = CertificateGenerator()
@@ -111,21 +114,33 @@ async def create_certificate(request: CertificateRequest):
         prefix = request.output_prefix or request.common_name
         generator.save_to_files(cert, prefix)
         
+        # 记录已生成的证书文件
+        key_file = f"{prefix}.key"
+        pem_file = f"{prefix}.pem"
+        generated_certs.update([key_file, pem_file])
+        
         return {
             "status": "success",
-            "files": [f"{prefix}.key", f"{prefix}.pem"],
+            "files": [key_file, pem_file],
             "timestamp": datetime.now().isoformat()
         }
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/certificates/{file_name}")
+@app.get("/certificates/{file_name}", tags=["证书"])
 async def download_certificate(file_name: str):
     if not file_name.endswith(('.key', '.pem')):
         raise HTTPException(status_code=400, detail="仅支持.key和.pem文件下载")
     
     if not os.path.exists(file_name):
         raise HTTPException(status_code=404, detail="文件不存在")
+    
+    # 检查文件是否是通过API生成的
+    if file_name not in generated_certs:
+        raise HTTPException(
+            status_code=403,
+            detail="必须先通过API生成证书才能下载"
+        )
     
     return FileResponse(file_name)
 
