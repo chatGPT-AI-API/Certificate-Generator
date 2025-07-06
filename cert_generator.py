@@ -160,7 +160,12 @@ class CertificateGenerator:
             ))
 
         with open(f"{prefix}.pem", "wb") as f:
-            f.write(cert.public_bytes(serialization.Encoding.PEM))
+            pem_data = cert.public_bytes(serialization.Encoding.PEM)
+            f.write(pem_data)
+            
+        # 打印证书信息用于调试
+        print("证书信息:")
+        print(pem_data.decode('utf-8'))
 
 def run_gui():
     if not tk_available:
@@ -204,7 +209,7 @@ def run_gui():
     frame.pack(fill=tk.BOTH, expand=True)
 
     # 证书通用名称
-    ttk.Label(frame, text="证书通用名称:").grid(row=0, column=1, sticky=tk.W, pady=5)  # type: ignore
+    ttk.Label(frame, text="证书通用名称:").grid(row=0, column=0, sticky=tk.W, pady=5)  # type: ignore
     entry_common_name = ttk.Entry(frame, width=30)  # type: ignore
     entry_common_name.grid(row=0, column=1, sticky=tk.W, pady=5)  # type: ignore
 
