@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>证书生成服务</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #2c3e50;
+        }
+        .endpoint {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        .method {
+            font-weight: bold;
+            color: #3498db;
+        }
+        .path {
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <h1>欢迎使用证书生成API服务</h1>
+    <p>API文档: <a href="/docs">/docs</a></p>
+    
+    <h2>可用端点</h2>
+    <div class="endpoint">
+        <span class="method">POST</span> <span class="path">/certificates</span>
+        <p>生成新的证书</p>
+    </div>
+    <div class="endpoint">
+        <span class="method">GET</span> <span class="path">/certificates/{file_name}</span>
+        <p>下载证书文件</p>
+    </div>
+</body>
+</html>

@@ -1,11 +1,43 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.responses import FileResponse
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 from cert_generator import CertificateGenerator
 from datetime import datetime
 import os
 
-app = FastAPI(title="证书生成API", version="1.0.0")
+templates = Jinja2Templates(directory="templates")
+
+app = FastAPI(
+    title="证书生成API",
+    version="1.0.0",
+    description="证书生成服务API文档",
+    docs_url="/docs",
+    redoc_url="/redoc"
+)
+
+@app.get("/", response_class=HTMLResponse)
+async def root(request: Request):
+    return templates.TemplateResponse(
+        "index.html",
+        {
+            "request": request,
+            "message": "欢迎使用证书生成API服务",
+            "docs": "/docs",
+            "endpoints": {
+                "create_certificate": {
+                    "method": "POST",
+                    "path": "/certificates",
+                    "description": "生成新的证书"
+                },
+                "download_certificate": {
+                    "method": "GET",
+                    "path": "/certificates/{file_name}",
+                    "description": "下载证书文件"
+                }
+            }
+        }
+    )
 
 class CertificateRequest(BaseModel):
     common_name: str
