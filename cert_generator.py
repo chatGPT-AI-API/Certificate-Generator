@@ -215,7 +215,7 @@ def run_gui():
 
     # 有效期天数
     ttk.Label(frame, text="有效期天数:").grid(row=1, column=0, sticky=tk.W, pady=5)  # type: ignore
-    spinbox_days = ttk.Spinbox(frame, from_=1, to=3650, width=27)  # type: ignore
+    spinbox_days = ttk.Spinbox(frame, from_=1, to=3650, width=27)  # 设置最小值为1
     spinbox_days.set(365)
     spinbox_days.grid(row=1, column=1, sticky=tk.W, pady=5)  # type: ignore
 
@@ -254,3 +254,5 @@ if __name__ == "__main__":
         certificate = generator.generate_cert(common_name=args.name, validity_days=args.days)
         generator.save_to_files(certificate, args.output or args.name)
         print(f"证书已生成: {args.output or args.name}.key/pem")
+    if args.days <= 0:
+        parser.error('有效期天数必须大于0')
