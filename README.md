@@ -9,6 +9,31 @@
 - [证书生成参数说明](#参数说明)
 - [常见问题解答](./faq.md)
 
+## API接口
+新增REST API功能，可通过HTTP请求生成和下载证书
+
+### 启动API服务
+```bash
+python main.py
+```
+
+### 接口说明
+1. 生成证书
+```bash
+POST /certificates
+{
+  "common_name": "example.com",
+  "validity_days": 365,
+  "output_prefix": "mycert"
+}
+```
+
+2. 下载证书文件
+```bash
+GET /certificates/{filename}
+支持下载.key和.pem文件
+```
+
 ## 环境要求
 - Python 3.8+
 - cryptography 41.0.7+
