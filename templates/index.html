@@ -39,9 +39,9 @@
         <p>生成新的证书</p>
     </div>
     <div class="endpoint">
-        <span class="method">GET</span> <span class="path">/certificates/{file_name}</span>
-        <p>下载证书文件</p>
-        <p><strong>注意：</strong>必须先通过生成接口创建证书才能下载</p>
+        <span class="method">POST</span> <span class="path">/certificates</span>
+        <p>生成并下载证书文件(.key和.pem)</p>
+        <p><strong>注意：</strong>将直接返回包含证书文件的zip压缩包</p>
     </div>
 </body>
 </html>

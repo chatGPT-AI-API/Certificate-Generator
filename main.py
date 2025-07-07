@@ -102,6 +102,9 @@ class CertificateRequest(BaseModel):
     validity_days: int = 365
     output_prefix: str = None
 
+from fastapi.responses import StreamingResponse
+from io import BytesIO
+
 @app.post("/certificates", tags=["证书"])
 async def create_certificate(request: CertificateRequest):
     try:
@@ -112,37 +115,27 @@ async def create_certificate(request: CertificateRequest):
         )
         
         prefix = request.output_prefix or request.common_name
-        generator.save_to_files(cert, prefix)
+        key_bytes, cert_bytes = generator.get_cert_bytes(cert)
         
-        # 记录已生成的证书文件
-        key_file = f"{prefix}.key"
-        pem_file = f"{prefix}.pem"
-        generated_certs.update([key_file, pem_file])
+        # 创建包含两个文件的zip包
+        zip_buffer = BytesIO()
+        with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+            zip_file.writestr(f"{prefix}.key", key_bytes)
+            zip_file.writestr(f"{prefix}.pem", cert_bytes)
+        zip_buffer.seek(0)
         
-        return {
-            "status": "success",
-            "files": [key_file, pem_file],
-            "timestamp": datetime.now().isoformat()
-        }
+        # 返回zip文件下载
+        return StreamingResponse(
+            zip_buffer,
+            media_type="application/zip",
+            headers={
+                "Content-Disposition": f"attachment; filename={prefix}_certificates.zip"
+            }
+        )
     except Exception as e:
         raise HTTPException(status_code=400, detail=str(e))
 
-@app.get("/certificates/{file_name}", tags=["证书"])
-async def download_certificate(file_name: str):
-    if not file_name.endswith(('.key', '.pem')):
-        raise HTTPException(status_code=400, detail="仅支持.key和.pem文件下载")
-    
-    if not os.path.exists(file_name):
-        raise HTTPException(status_code=404, detail="文件不存在")
-    
-    # 检查文件是否是通过API生成的
-    if file_name not in generated_certs:
-        raise HTTPException(
-            status_code=403,
-            detail="必须先通过API生成证书才能下载"
-        )
-    
-    return FileResponse(file_name)
+# 移除旧的下载端点
 
 if __name__ == "__main__":
     import uvicorn

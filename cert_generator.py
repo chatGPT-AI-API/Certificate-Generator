@@ -151,21 +151,28 @@ class CertificateGenerator:
 
         return cert
 
+    def get_cert_bytes(self, cert):
+        """返回证书和私钥的字节数据"""
+        key_bytes = self.private_key.private_bytes(
+            encoding=serialization.Encoding.PEM,
+            format=serialization.PrivateFormat.TraditionalOpenSSL,
+            encryption_algorithm=serialization.NoEncryption()
+        )
+        cert_bytes = cert.public_bytes(serialization.Encoding.PEM)
+        return key_bytes, cert_bytes
+
     def save_to_files(self, cert, prefix='cert'):
+        key_bytes, cert_bytes = self.get_cert_bytes(cert)
+        
         with open(f"{prefix}.key", "wb") as f:
-            f.write(self.private_key.private_bytes(
-                encoding=serialization.Encoding.PEM,
-                format=serialization.PrivateFormat.TraditionalOpenSSL,
-                encryption_algorithm=serialization.NoEncryption()
-            ))
+            f.write(key_bytes)
 
         with open(f"{prefix}.pem", "wb") as f:
-            pem_data = cert.public_bytes(serialization.Encoding.PEM)
-            f.write(pem_data)
+            f.write(cert_bytes)
             
         # 打印证书信息用于调试
         print("证书信息:")
-        print(pem_data.decode('utf-8'))
+        print(cert_bytes.decode('utf-8'))
 
 def run_gui():
     if not tk_available:
