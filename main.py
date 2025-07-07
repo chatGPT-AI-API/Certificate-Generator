@@ -5,6 +5,7 @@ from pydantic import BaseModel
 from cert_generator import CertificateGenerator
 from datetime import datetime
 import os
+import zipfile
 
 # 跟踪已生成的证书文件
 generated_certs = set()
