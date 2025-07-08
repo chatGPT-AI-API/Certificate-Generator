@@ -114,14 +114,16 @@ except ImportError:
 class CertificateGenerator:
     def __init__(self):
         import logging
-        logging.basicConfig(level=logging.INFO)
+        import logging.config
+        logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
+        self.logger = logging.getLogger(__name__)
         
         self.private_key = rsa.generate_private_key(
             public_exponent=65537,
             key_size=2048,
             backend=default_backend()
         )
-        logging.info(f"私钥生成成功: {self.private_key is not None}")
+        self.logger.info(f"私钥生成成功: {self.private_key is not None}")
 
     def generate_cert(self, common_name, validity_days=365):
         subject = issuer = x509.Name([
@@ -171,12 +173,11 @@ class CertificateGenerator:
             f.write(cert_bytes)
             
         # 打印证书信息用于调试
-        print("证书信息:")
-        print(cert_bytes.decode('utf-8'))
+        self.logger.debug("证书信息:\n%s", cert_bytes.decode('utf-8'))
 
 def run_gui():
     if not tk_available:
-        print("错误：无法导入Tkinter库，将使用命令行模式")
+        self.logger.warning("无法导入Tkinter库，将使用命令行模式")
         return False
 
     def generate_certificate():
@@ -196,7 +197,7 @@ def run_gui():
             if messagebox is not None:
                 messagebox.showinfo("成功", f"证书已生成: {output_prefix}.key/pem")
             else:
-                print(f"证书已生成: {output_prefix}.key/pem")
+                self.logger.info(f"证书已生成: {output_prefix}.key/pem")
         except Exception as e:
             if messagebox:
                 messagebox.showerror("错误", f"生成证书时出错: {str(e)}")
@@ -260,6 +261,6 @@ if __name__ == "__main__":
         generator = CertificateGenerator()
         certificate = generator.generate_cert(common_name=args.name, validity_days=args.days)
         generator.save_to_files(certificate, args.output or args.name)
-        print(f"证书已生成: {args.output or args.name}.key/pem")
+        self.logger.info(f"证书已生成: {args.output or args.name}.key/pem")
     if args.days <= 0:
         parser.error('有效期天数必须大于0')

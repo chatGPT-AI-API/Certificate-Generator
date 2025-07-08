@@ -1,3 +1,5 @@
+import logging
+import logging.config
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -6,6 +8,10 @@ from cert_generator import CertificateGenerator
 from datetime import datetime
 import os
 import zipfile
+
+# 配置日志
+logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
+logger = logging.getLogger(__name__)
 
 # 跟踪已生成的证书文件
 generated_certs = set()
@@ -108,6 +114,7 @@ from io import BytesIO
 
 @app.post("/certificates", tags=["证书"])
 async def create_certificate(request: CertificateRequest):
+    logger.info(f"开始生成证书: {request.common_name}, 有效期: {request.validity_days}天")
     try:
         generator = CertificateGenerator()
         cert = generator.generate_cert(
@@ -134,10 +141,12 @@ async def create_certificate(request: CertificateRequest):
             }
         )
     except Exception as e:
+        logger.error(f"生成证书失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
 
 # 移除旧的下载端点
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    logger.info("启动证书生成服务")
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_config="logging.conf")
