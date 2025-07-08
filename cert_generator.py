@@ -112,18 +112,21 @@ except ImportError:
     messagebox = DummyMessageBox()
 
 class CertificateGenerator:
-    def __init__(self):
+    def __init__(self, key_size=2048):
         import logging
         import logging.config
         logging.config.fileConfig('logging.conf', disable_existing_loggers=False)
         self.logger = logging.getLogger(__name__)
         
+        if key_size not in [1024, 2048, 3072, 4096]:
+            raise ValueError("密钥长度必须是1024, 2048, 3072或4096位")
+            
         self.private_key = rsa.generate_private_key(
             public_exponent=65537,
-            key_size=2048,
+            key_size=key_size,
             backend=default_backend()
         )
-        self.logger.info(f"私钥生成成功: {self.private_key is not None}")
+        self.logger.info(f"私钥生成成功: {self.private_key is not None}, 密钥长度: {key_size}位")
 
     def generate_cert(self, common_name, validity_days=365):
         subject = issuer = x509.Name([
@@ -183,6 +186,7 @@ def run_gui():
     def generate_certificate():
         common_name = entry_common_name.get()
         validity_days = int(spinbox_days.get())
+        key_size = int(combobox_key_size.get())
         output_prefix = entry_output.get() or common_name
 
         if not common_name:
@@ -191,7 +195,7 @@ def run_gui():
             return
 
         try:
-            generator = CertificateGenerator()
+            generator = CertificateGenerator(key_size=key_size)
             certificate = generator.generate_cert(common_name=common_name, validity_days=validity_days)
             generator.save_to_files(certificate, output_prefix)
             if messagebox is not None:
@@ -232,12 +236,18 @@ def run_gui():
     entry_output = ttk.Entry(frame, width=30)  # type: ignore
     entry_output.grid(row=2, column=1, sticky=tk.W, pady=5)  # type: ignore
 
+    # 密钥长度
+    ttk.Label(frame, text="密钥长度:").grid(row=3, column=0, sticky=tk.W, pady=5)  # type: ignore
+    combobox_key_size = ttk.Combobox(frame, values=[1024, 2048, 3072, 4096], width=27)  # type: ignore
+    combobox_key_size.set(2048)
+    combobox_key_size.grid(row=3, column=1, sticky=tk.W, pady=5)  # type: ignore
+
     # 生成按钮
     button_generate = ttk.Button(frame, text="生成证书", command=generate_certificate)  # type: ignore
-    button_generate.grid(row=3, column=0, columnspan=2, pady=20)  # type: ignore
+    button_generate.grid(row=4, column=0, columnspan=2, pady=20)  # type: ignore
 
     # 底部信息
-    ttk.Label(frame, text="SSL证书生成工具 v1.0").grid(row=4, column=0, columnspan=2, pady=10)  # type: ignore
+    ttk.Label(frame, text="SSL证书生成工具 v1.0").grid(row=5, column=0, columnspan=2, pady=10)  # type: ignore
 
     root.mainloop()
 
@@ -247,6 +257,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='SSL证书生成工具')
     parser.add_argument('-n', '--name', help='证书通用名称')
     parser.add_argument('-d', '--days', type=int, default=365, help='有效期天数')
+    parser.add_argument('-k', '--key-size', type=int, default=2048, choices=[1024, 2048, 3072, 4096], help='RSA密钥长度(1024,2048,3072,4096)')
     parser.add_argument('-o', '--output', help='输出文件名前缀')
     parser.add_argument('--gui', action='store_true', help='启动图形界面')
     
@@ -258,7 +269,7 @@ if __name__ == "__main__":
         if args.name is None:
             parser.error('-n/--name 参数是必需的，除非使用 --gui 选项')
         
-        generator = CertificateGenerator()
+        generator = CertificateGenerator(key_size=args.key_size)
         certificate = generator.generate_cert(common_name=args.name, validity_days=args.days)
         generator.save_to_files(certificate, args.output or args.name)
         self.logger.info(f"证书已生成: {args.output or args.name}.key/pem")

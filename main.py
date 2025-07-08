@@ -144,7 +144,26 @@ async def create_certificate(request: CertificateRequest):
         logger.error(f"生成证书失败: {str(e)}", exc_info=True)
         raise HTTPException(status_code=400, detail=str(e))
 
-# 移除旧的下载端点
+@app.get("/certificates/{file_name}", tags=["证书"])
+async def download_certificate(file_name: str):
+    """下载证书文件(.key或.pem)"""
+    if not file_name.endswith(('.key', '.pem')):
+        raise HTTPException(
+            status_code=400,
+            detail="仅支持.key或.pem文件下载"
+        )
+    
+    if not os.path.exists(file_name):
+        raise HTTPException(
+            status_code=404,
+            detail="文件不存在"
+        )
+    
+    return FileResponse(
+        file_name,
+        media_type="application/octet-stream",
+        filename=file_name
+    )
 
 if __name__ == "__main__":
     import uvicorn

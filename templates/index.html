@@ -32,12 +32,23 @@
             font-weight: bold;
         }
         input[type="text"],
-        input[type="number"] {
+        input[type="number"],
+        select {
             width: 100%;
             padding: 10px;
             border: 1px solid #ddd;
             border-radius: 4px;
             box-sizing: border-box;
+            font-family: inherit;
+            font-size: inherit;
+            background-color: white;
+            transition: border-color 0.3s ease;
+        }
+        
+        select:focus {
+            outline: none;
+            border-color: #4CAF50;
+            box-shadow: 0 0 0 2px rgba(76, 175, 80, 0.2);
         }
         button {
             background-color: #4CAF50;
@@ -85,6 +96,15 @@
                        value="365" min="1" max="3650">
             </div>
             <div class="form-group">
+                <label for="key_size">密钥长度:</label>
+                <select id="key_size" name="key_size" class="form-control">
+                    <option value="1024">1024位</option>
+                    <option value="2048" selected>2048位</option>
+                    <option value="3072">3072位</option>
+                    <option value="4096">4096位</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label for="output_prefix">文件前缀(可选):</label>
                 <input type="text" id="output_prefix" name="output_prefix"
                        placeholder="默认为通用名称">
@@ -117,6 +137,7 @@
             const formData = {
                 common_name: document.getElementById('common_name').value,
                 validity_days: parseInt(document.getElementById('validity_days').value),
+                key_size: parseInt(document.getElementById('key_size').value),
                 output_prefix: document.getElementById('output_prefix').value || undefined
             };
 
